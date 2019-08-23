@@ -33,6 +33,7 @@ Extends support of the SDK to OneView Rest API version 800 (OneView v4.1).
 - Ethernet network
 - FC network
 - FCOE network
+- Firmware bundle signature upload
 - Interconnect type
 - Internal link set
 - Logical enclosure

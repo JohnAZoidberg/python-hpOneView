@@ -30,8 +30,11 @@ from future import standard_library
 
 standard_library.install_aliases()
 
+import logging
 
 from hpOneView.resources.resource import ResourceClient
+
+logger = logging.getLogger(__name__)
 
 
 class FirmwareBundles(object):
@@ -43,9 +46,10 @@ class FirmwareBundles(object):
 
     def __init__(self, con):
         self._connection = con
-        self._client = ResourceClient(con, self.URI)
+        self._bundle_client = ResourceClient(con, self.URI)
+        self._compsig_client = ResourceClient(con, '{}/addCompsig'.format(self.URI))
 
-    def upload(self, file_path, timeout=-1):
+    def upload(self, file_path, timeout=-1, compsig_path=None):
         """
         Upload an SPP ISO image file or a hotfix file to the appliance.
         The API supports upload of one hotfix at a time into the system.
@@ -55,8 +59,21 @@ class FirmwareBundles(object):
             file_path: Full path to firmware.
             timeout: Timeout in seconds. Wait for task completion by default. The timeout does not abort the operation
                 in OneView; it just stops waiting for its completion.
+            compsig_path: Full path to the signature of the bundle. If omitted OneView might complain abouto missing signature.
 
         Returns:
-          dict: Information about the updated firmware bundle.
+          (dict, dict): Information about the updated firmware bundle and potential compsig signature.
         """
-        return self._client.upload(file_path, timeout=timeout)
+        bundle_res = self._bundle_client.upload(file_path, timeout=timeout)
+
+        if compsig_path is None:
+            return (bundle_res, None)
+
+        if self._connection._apiVersion < 1000:
+            logger.warning('API Version {} does not support compsig upload. Skipping it.'.format(
+                self._connection._apiVersion))
+            return (bundle_res, None)
+
+        compsig_res = self._compsig_client.upload(compsig_path, timeout=timeout)
+
+        return (bundle_res, compsig_res)
